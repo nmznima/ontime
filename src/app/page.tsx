@@ -1,103 +1,133 @@
-import Image from "next/image";
+'use client'
 
-export default function Home() {
+import { useEffect, useMemo, useRef, useState } from "react";
+
+export default function TimerApp() {
+  const [title, setTitle] = useState("");
+  const [seconds, setSeconds] = useState(0);
+  const [running, setRunning] = useState(false);
+  const [history, setHistory] = useState<{ title: string; seconds: number; finishedAt: string }[]>([]);
+
+  // keep interval stable
+  const intervalRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (running) {
+      intervalRef.current = window.setInterval(() => {
+        setSeconds((s) => s + 1);
+      }, 1000);
+    }
+    return () => {
+      if (intervalRef.current !== null) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    };
+  }, [running]);
+
+  const timeString = useMemo(() => formatSeconds(seconds), [seconds]);
+  const totalSeconds = useMemo(() => history.reduce((acc, h) => acc + h.seconds, 0), [history]);
+  const totalTimeString = useMemo(() => formatSeconds(totalSeconds), [totalSeconds]);
+
+  function formatSeconds(s: number) {
+    const hrs = Math.floor(s / 3600);
+    const mins = Math.floor((s % 3600) / 60);
+    const secs = s % 60;
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${pad(hrs)}:${pad(mins)}:${pad(secs)}`;
+  }
+
+  function handleStart() {
+    if (!title.trim()) return; // require a title before starting
+    setRunning(true);
+  }
+
+  function handlePauseResume() {
+    setRunning((r) => !r);
+  }
+
+  function handleFinish() {
+    if (!title.trim()) return; // nothing to save without title
+    const finishedAt = new Date().toLocaleString();
+    setHistory((h) => [{ title: title.trim(), seconds, finishedAt }, ...h]);
+    // reset timer & title (you can keep the title if you prefer)
+    setSeconds(0);
+    setRunning(false);
+    setTitle("");
+  }
+
   return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+    <div className="min-h-screen w-full bg-slate-50 text-slate-900 flex items-start justify-center p-6">
+      <div className="w-full max-w-2xl">
+        <header className="mb-6">
+          <h1 className="text-3xl font-bold tracking-tight">Simple Count-Up Timer</h1>
+          <p className="text-sm text-slate-500 mt-1">Enter an activity title, start the timer, then pause/resume or finish to log it.</p>
+        </header>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+        <div className="flex flex-col bg-white rounded-2xl shadow border border-slate-200">
+          <input
+            id="title"
+            type="text"
+            placeholder="What are you working on?"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            disabled={running}
+            className="w-full p-4 rounded-t-2xl border-b-1 border-slate-200 outline-none disabled:bg-slate-100"
+          />
+
+          <div className="m-4 flex items-center justify-between">
+            <div className="text-5xl font-mono tabular-nums tracking-tight">{timeString}</div>
+            <div className="flex items-center gap-3">
+              {!running && seconds === 0 ? (
+                <button
+                  onClick={handleStart}
+                  className="rounded-xl px-4 py-2 text-white bg-slate-900 hover:bg-slate-800 active:scale-[.98]"
+                >
+                  Start
+                </button>
+              ) : (
+                <button
+                  onClick={handlePauseResume}
+                  className="rounded-xl px-4 py-2 border border-slate-300 hover:bg-slate-50"
+                >
+                  {running ? "Pause" : "Resume"}
+                </button>
+              )}
+
+              {(seconds > 0 || running) && (
+                <button
+                  onClick={handleFinish}
+                  className="rounded-xl px-4 py-2 border border-rose-300 text-rose-700 hover:bg-rose-50"
+                >
+                  Finish
+                </button>
+              )}
+            </div>
+          </div>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+
+        <section className="mt-8">
+          <div className="flex flex-row">
+            <h2 className="flex basis-2/3 text-lg font-semibold">Completed activities</h2>
+            <h2 className="flex basis-1/3 justify-end text-lg font-semibold">Total: {totalTimeString}</h2>
+          </div>
+          {history.length === 0 ? (
+            <p className="text-slate-500 mt-2">Nothing here yet. Finish an activity to see it below.</p>
+          ) : (
+            <ul className="mt-3 space-y-3">
+              {history.map((item, idx) => (
+                <li key={idx} className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 flex items-center justify-between">
+                  <div>
+                    <div className="font-medium">{item.title}</div>
+                    <div className="text-xs text-slate-500">Finished at {item.finishedAt}</div>
+                  </div>
+                  <div className="font-mono tabular-nums">{formatSeconds(item.seconds)}</div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      </div>
     </div>
   );
 }
