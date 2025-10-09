@@ -1,44 +1,44 @@
+// TimerApp.tsx
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import CountUpTimer from './components/CountUpTimer'; // Import the new component
+
+// Helper function remains outside
+function formatSeconds(s: number) {
+  const hrs = Math.floor(s / 3600);
+  const mins = Math.floor((s % 3600) / 60);
+  const secs = s % 60;
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${pad(hrs)}:${pad(mins)}:${pad(secs)}`;
+}
 
 export default function TimerApp() {
   const [title, setTitle] = useState("");
-  const [seconds, setSeconds] = useState(0);
+  // TimerApp now holds the current seconds reported by CountUpTimer
+  const [seconds, setSeconds] = useState(0); 
   const [running, setRunning] = useState(false);
   const [history, setHistory] = useState<{ title: string; seconds: number; finishedAt: string }[]>([]);
 
-  // keep interval stable
-  const intervalRef = useRef<number | null>(null);
+  // Ref to hold the internal reset function of CountUpTimer
+  const resetTimerRef = useRef<(() => void) | null>(null);
 
-  useEffect(() => {
-    if (running) {
-      intervalRef.current = window.setInterval(() => {
-        setSeconds((s) => s + 1);
-      }, 1000);
-    }
-    return () => {
-      if (intervalRef.current !== null) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
-    };
-  }, [running]);
+  // Function passed to CountUpTimer to update the seconds state
+  const handleTimeUpdate = (newSeconds: number) => {
+    setSeconds(newSeconds);
+  };
+  
+  // Function passed to CountUpTimer to capture its internal reset function
+  const handleSetReset = (resetFunc: () => void) => {
+    resetTimerRef.current = resetFunc;
+  };
 
   const timeString = useMemo(() => formatSeconds(seconds), [seconds]);
   const totalSeconds = useMemo(() => history.reduce((acc, h) => acc + h.seconds, 0), [history]);
   const totalTimeString = useMemo(() => formatSeconds(totalSeconds), [totalSeconds]);
 
-  function formatSeconds(s: number) {
-    const hrs = Math.floor(s / 3600);
-    const mins = Math.floor((s % 3600) / 60);
-    const secs = s % 60;
-    const pad = (n: number) => String(n).padStart(2, "0");
-    return `${pad(hrs)}:${pad(mins)}:${pad(secs)}`;
-  }
-
   function handleStart() {
-    if (!title.trim()) return; // require a title before starting
+    if (!title.trim()) return;
     setRunning(true);
   }
 
@@ -47,11 +47,17 @@ export default function TimerApp() {
   }
 
   function handleFinish() {
-    if (!title.trim()) return; // nothing to save without title
+    if (!title.trim() || seconds === 0) return;
+
     const finishedAt = new Date().toLocaleString();
     setHistory((h) => [{ title: title.trim(), seconds, finishedAt }, ...h]);
-    // reset timer & title (you can keep the title if you prefer)
-    setSeconds(0);
+
+    // Use the function exposed by the child component to reset it
+    if (resetTimerRef.current) {
+        resetTimerRef.current();
+    }
+    
+    // Reset control states
     setRunning(false);
     setTitle("");
   }
@@ -76,7 +82,14 @@ export default function TimerApp() {
           />
 
           <div className="m-4 flex items-center justify-between">
-            <div className="text-5xl font-mono tabular-nums tracking-tight">{timeString}</div>
+            {/* RENDER THE SEPARATE TIMER COMPONENT */}
+            <CountUpTimer 
+                running={running} 
+                onTimeUpdate={handleTimeUpdate} 
+                onReset={handleSetReset}
+            />
+            {/* END RENDER */}
+            
             <div className="flex items-center gap-3">
               {!running && seconds === 0 ? (
                 <button
