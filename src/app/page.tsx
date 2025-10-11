@@ -1,7 +1,7 @@
 // TimerApp.tsx
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import CountUpTimer from './components/CountUpTimer'; // Import the new component
 
 // Helper function remains outside
@@ -33,7 +33,6 @@ export default function TimerApp() {
     resetTimerRef.current = resetFunc;
   };
 
-  const timeString = useMemo(() => formatSeconds(seconds), [seconds]);
   const totalSeconds = useMemo(() => history.reduce((acc, h) => acc + h.seconds, 0), [history]);
   const totalTimeString = useMemo(() => formatSeconds(totalSeconds), [totalSeconds]);
 

@@ -87,7 +87,7 @@ export default function CountUpTimer({ running, onTimeUpdate, onReset }: CountUp
   // Expose the reset function to the parent (simpler alternative to a ref)
   useEffect(() => {
     onReset(() => resetTimer());
-  }, [onReset]);
+  }, [onReset, resetTimer]);
   
   // Display string for the timer
   const timeString = useMemo(() => formatSeconds(seconds), [seconds]);
