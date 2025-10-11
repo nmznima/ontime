@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 // Helper function to format time (can be external or defined here)
 function formatSeconds(s: number) {
@@ -78,11 +78,11 @@ export default function CountUpTimer({ running, onTimeUpdate, onReset }: CountUp
   }, [running, seconds, onTimeUpdate]); // Include seconds and onTimeUpdate for accurate closure
 
   // Internal reset function called by the parent through the onFinish mechanism
-  const resetTimer = () => {
+  const resetTimer = useCallback(() => {
       setSeconds(0);
       startTimeRef.current = null;
       onTimeUpdate(0); // Ensure parent also resets
-  }
+  }, [onTimeUpdate]);
   
   // Expose the reset function to the parent (simpler alternative to a ref)
   useEffect(() => {
