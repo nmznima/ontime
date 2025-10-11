@@ -19,7 +19,7 @@ export default function LoginPage() {
       email,
       options: {
         // optional for OTP; harmless if set
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        emailRedirectTo: `${window.location.origin}/login/callback`,
         // shouldCreateUser: false, // uncomment to prevent auto-signup
       },
     })
